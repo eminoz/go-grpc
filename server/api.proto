@@ -1,0 +1,30 @@
+ syntax = "proto3";
+ option go_package = "api/";
+ package apiproto;
+ 
+ message EchoRequest {
+   string message = 1;
+
+ }
+ message User{
+  string username = 1;
+   string lastname = 2;
+ }
+ 
+ // EchoResponse is the response for echo.
+ message EchoResponse {
+   string message = 1;
+ }
+ 
+ // Echo is the echo service.
+ service Echo {
+   // UnaryEcho is unary echo.
+   rpc UnaryEcho(EchoRequest) returns (EchoResponse) {}
+   // ServerStreamingEcho is server side streaming.
+   rpc ServerStreamingEcho(EchoRequest) returns (stream EchoResponse) {}
+   // ClientStreamingEcho is client side streaming.
+   rpc ClientStreamingEcho(stream User) returns (EchoResponse) {}
+   // BidirectionalStreamingEcho is bidi streaming.
+   rpc BidirectionalStreamingEcho(stream EchoRequest) returns (stream EchoResponse) {}
+ }
+ 
