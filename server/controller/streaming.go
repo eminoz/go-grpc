@@ -20,8 +20,9 @@ const (
 )
 
 // UnaryEcho is unary echo.
-func (s Strm) UnaryEcho(_ context.Context, _ *api.EchoRequest) (*api.EchoResponse, error) {
-	panic("not implemented") // TODO: Implement
+func (s Strm) UnaryEcho(ctx context.Context, in *api.EchoRequest) (*api.EchoResponse, error) {
+	fmt.Print(in.Message)
+	return &api.EchoResponse{Message: in.Message}, nil
 }
 
 // ServerStreamingEcho is server side streaming.
@@ -77,6 +78,32 @@ func (s Strm) ClientStreamingEcho(stream api.Echo_ClientStreamingEchoServer) err
 }
 
 // BidirectionalStreamingEcho is bidi streaming.
-func (s Strm) BidirectionalStreamingEcho(_ api.Echo_BidirectionalStreamingEchoServer) error {
-	panic("not implemented") // TODO: Implement
+func (s Strm) BidirectionalStreamingEcho(stream api.Echo_BidirectionalStreamingEchoServer) error {
+	md, ok := metadata.FromIncomingContext(stream.Context())
+	if !ok {
+
+		return status.Errorf(codes.DataLoss, "BidirectionalStreamingEcho: failed to get metadata")
+	}
+
+	if t, ok := md["timestamp"]; ok {
+		fmt.Printf("timestamp from metadata:\n")
+		for i, e := range t {
+			fmt.Printf(" %d. %s\n", i, e)
+		}
+	}
+	// Create and send header.
+	header := metadata.New(map[string]string{"location": "MTV", "timestamp": time.Now().Format(timestampFormat)})
+	stream.SendHeader(header)
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		fmt.Print("from server message " + in.Message)
+		stream.Send(&api.EchoResponse{Message: in.Message})
+	}
+
 }

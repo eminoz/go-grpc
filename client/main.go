@@ -32,7 +32,17 @@ func main() {
 
 	// g := gin.Default()
 	app := fiber.New()
+	app.Post("/unaryecho/:in", func(c *fiber.Ctx) error {
+		income := c.Params("in")
+		r, err := client.UnaryEcho(context.Background(), &api.EchoRequest{Message: income})
+		if err != nil {
+			log.Fatalf("failed to call UnaryEcho: %v", err)
+		}
+		fmt.Printf("response:\n")
+		fmt.Printf(" - %s\n", r.Message)
 
+		return c.JSON(true)
+	})
 	app.Get("/creat", func(ct *fiber.Ctx) error {
 
 		// Create metadata and context.
@@ -118,5 +128,37 @@ func main() {
 
 		return c.JSON(r.Message)
 	})
+	app.Post("/bidirectional/:in", func(c *fiber.Ctx) error {
+		stream, err := client.BidirectionalStreamingEcho(context.Background())
+		if err != nil {
+			log.Fatalf("failed to send streaming: %v\n", err)
+		}
+		income := c.Params("in")
+		go func() {
+
+			for i := 0; i < streamingCount; i++ {
+				err := stream.Send(&api.EchoRequest{Message: income})
+				if err != nil {
+					log.Fatalf("failed to send streaming: %v\n", err)
+				}
+			}
+			stream.CloseSend()
+		}()
+		// Read all the responses.
+
+		fmt.Printf("response:\n")
+		for {
+			r, err := stream.Recv()
+			if err != nil {
+
+				fmt.Printf(" - %s\n", err)
+				break
+			}
+			fmt.Printf(" - %s\n", r.Message)
+		}
+
+		return c.JSON(true)
+	})
 	app.Listen(":3131")
+
 }
